@@ -60,7 +60,7 @@ export async function runAnalysis(panelWindow: BrowserWindow, articleText: strin
     (async () => {
       emitProgress(panelWindow, 'lineage', 'running', 'Tracing citation lineage...')
       try {
-        const result = await runWithTimeout(() => runLineageAgent(articleText), 45000, 'lineage')
+        const result = await runWithTimeout(() => runLineageAgent(articleText), 90000, 'lineage')
         if (result) {
           emitProgress(panelWindow, 'lineage', 'completed', 'Lineage traced', result)
         } else {
@@ -78,7 +78,7 @@ export async function runAnalysis(panelWindow: BrowserWindow, articleText: strin
       try {
         const result = await runWithTimeout(
           () => runSteelmanAgent(articleText),
-          35000,
+          60000,
           'steelman'
         )
         if (result) {
@@ -96,7 +96,7 @@ export async function runAnalysis(panelWindow: BrowserWindow, articleText: strin
     (async () => {
       emitProgress(panelWindow, 'funding', 'running', 'Checking funding & incentives...')
       try {
-        const result = await runWithTimeout(() => runFundingAgent(articleText), 25000, 'funding')
+        const result = await runWithTimeout(() => runFundingAgent(articleText), 60000, 'funding')
         if (result) {
           emitProgress(panelWindow, 'funding', 'completed', 'Funding analyzed', result)
         } else {
@@ -114,7 +114,7 @@ export async function runAnalysis(panelWindow: BrowserWindow, articleText: strin
       try {
         const result = await runWithTimeout(
           () => runTrackRecordAgent(articleText),
-          25000,
+          60000,
           'track_record'
         )
         if (result) {

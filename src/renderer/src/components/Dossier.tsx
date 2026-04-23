@@ -4,9 +4,11 @@ import type { RunResult } from '@shared/types'
 
 function AgentSection({
   title,
+  summary,
   children
 }: {
   title: string
+  summary: string
   children: React.ReactNode
 }): React.JSX.Element {
   const [open, setOpen] = useState(false)
@@ -14,10 +16,15 @@ function AgentSection({
     <div className="border-b border-gray-700/50 last:border-b-0">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between py-2 px-1 text-xs text-gray-400 hover:text-gray-200"
+        className="w-full flex items-start justify-between py-2 px-1 text-xs text-gray-400 hover:text-gray-200"
       >
-        <span>{title}</span>
-        <span className="text-[10px]">{open ? '▼' : '▶'}</span>
+        <div className="flex flex-col items-start gap-0.5 text-left">
+          <span>{title}</span>
+          {!open && summary && (
+            <span className="text-[11px] text-gray-500 line-clamp-1">{summary}</span>
+          )}
+        </div>
+        <span className="text-[10px] shrink-0 mt-0.5">{open ? '▼' : '▶'}</span>
       </button>
       <AnimatePresence>
         {open && (
@@ -56,19 +63,24 @@ export function Dossier({ result }: { result: RunResult }): React.JSX.Element {
           >
             <div className="p-3">
               {result.lineage && (
-                <AgentSection title="The Lineage Agent found...">
+                <AgentSection
+                  title="Lineage"
+                  summary={result.lineage.summary}
+                >
                   <p className="mb-1">
-                    <strong>Claims traced:</strong> {result.lineage.claims.join('; ')}
+                    <strong>Claims:</strong> {result.lineage.claims.join('; ')}
                   </p>
-                  <p className="mb-1">
-                    <strong>Sources found:</strong> {result.lineage.nodes.length} ({result.lineage.root_sources.length} root)
+                  <p>
+                    <strong>Sources:</strong> {result.lineage.nodes.length} ({result.lineage.root_sources.length} root)
                   </p>
-                  <p>{result.lineage.notes}</p>
                 </AgentSection>
               )}
 
               {result.steelman && (
-                <AgentSection title="The Steelman Agent found...">
+                <AgentSection
+                  title="Steelman"
+                  summary={result.steelman.summary}
+                >
                   <p className="mb-1">
                     <strong>Thesis:</strong> {result.steelman.thesis}
                   </p>
@@ -78,20 +90,19 @@ export function Dossier({ result }: { result: RunResult }): React.JSX.Element {
                         [{ce.strength}]
                       </span>{' '}
                       {ce.claim}
-                      <br />
-                      <span className="text-gray-500">{ce.reasoning}</span>
                     </div>
                   ))}
-                  <p>{result.steelman.notes}</p>
                 </AgentSection>
               )}
 
               {result.funding && (
-                <AgentSection title="The Funding Agent found...">
+                <AgentSection
+                  title="Funding"
+                  summary={result.funding.summary}
+                >
                   {result.funding.funders.map((f, i) => (
                     <p key={i} className="mb-1">
                       <strong>{f.entity}:</strong> {f.relationship}
-                      {f.notes && <span className="text-gray-500"> — {f.notes}</span>}
                     </p>
                   ))}
                   {result.funding.quoted_experts.map((e, i) => (
@@ -99,31 +110,27 @@ export function Dossier({ result }: { result: RunResult }): React.JSX.Element {
                       <strong>{e.name}</strong> ({e.affiliation}): {e.disclosed_conflicts}
                     </p>
                   ))}
-                  <p className="text-gray-500 italic">{result.funding.notes}</p>
                 </AgentSection>
               )}
 
               {result.track_record && (
-                <AgentSection title="The Track Record Agent found...">
-                  <p className="mb-1">
-                    <strong>Author:</strong> {result.track_record.author} ({result.track_record.publication})
-                  </p>
+                <AgentSection
+                  title="Track Record"
+                  summary={result.track_record.summary}
+                >
                   {result.track_record.prior_claims.map((c, i) => (
                     <div key={i} className="mb-1 pl-2 border-l border-gray-600">
                       <span className={c.aged_well ? 'text-green-400' : 'text-red-400'}>
                         {c.aged_well ? '✓' : '✗'}
                       </span>{' '}
                       {c.claim} <span className="text-gray-500">({c.date})</span>
-                      <br />
-                      <span className="text-gray-500">{c.notes}</span>
                     </div>
                   ))}
-                  <p className="text-gray-500 italic">{result.track_record.notes}</p>
                 </AgentSection>
               )}
 
               {result.synthesis.caveats.length > 0 && (
-                <AgentSection title="Caveats">
+                <AgentSection title="Caveats" summary={result.synthesis.caveats[0]}>
                   <ul className="list-disc pl-4">
                     {result.synthesis.caveats.map((c, i) => (
                       <li key={i}>{c}</li>

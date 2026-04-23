@@ -7,7 +7,7 @@ export async function runSteelmanAgent(articleText: string): Promise<SteelmanOut
     systemPrompt: STEELMAN_PROMPT,
     userMessage: `Article:\n<<<\n${articleText}\n>>>`,
     temperature: 0.3,
-    maxTokens: 2000,
+    maxTokens: 1000,
     enableWebSearch: true,
     webSearchMaxUses: 8
   })

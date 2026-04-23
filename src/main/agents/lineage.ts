@@ -36,7 +36,7 @@ export async function runLineageAgent(articleText: string): Promise<LineageOutpu
         systemPrompt: LINEAGE_TRACE_CLAIM,
         userMessage: `Claim:\n${claim}`,
         temperature: 0.3,
-        maxTokens: 2000,
+        maxTokens: 1000,
         enableWebSearch: true,
         webSearchMaxUses: 5
       })
@@ -120,16 +120,19 @@ export async function runLineageAgent(articleText: string): Promise<LineageOutpu
     independentRoots > 1 ? 0.5 + independentRoots * 0.15 : 0.3 + nodes.length * 0.05
   )
 
+  const summary =
+    independentRoots <= 1
+      ? `Single root source; ${nodes.length} sources in chain`
+      : `${independentRoots} independent roots across ${nodes.length} sources`
+
   return {
     agent: 'lineage',
+    summary,
     claims,
     nodes,
     edges,
     root_sources: rootSources,
     confidence: Math.round(confidence * 100) / 100,
-    notes:
-      independentRoots <= 1
-        ? `All coverage traces to ${independentRoots} root source. Found ${nodes.length} sources in citation chain.`
-        : `Found ${independentRoots} independent root sources across ${nodes.length} total sources.`
+    notes: summary
   }
 }

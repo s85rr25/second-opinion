@@ -1,9 +1,19 @@
 import type { FundingOutput } from '@shared/types'
-import { fundingStub } from '@shared/demo-stubs'
+import { callClaude } from './claude'
+import { FUNDING_PROMPT } from './prompts'
 
-export async function runFundingAgent(_articleText: string): Promise<FundingOutput> {
-  // Stub: return demo data after realistic delay
-  const delay = 5000 + Math.random() * 10000
-  await new Promise((resolve) => setTimeout(resolve, delay))
-  return fundingStub
+export async function runFundingAgent(articleText: string): Promise<FundingOutput> {
+  const result = await callClaude<Omit<FundingOutput, 'agent'>>({
+    systemPrompt: FUNDING_PROMPT,
+    userMessage: `Article:\n<<<\n${articleText}\n>>>`,
+    temperature: 0.3,
+    maxTokens: 1000,
+    enableWebSearch: true,
+    webSearchMaxUses: 5
+  })
+
+  return {
+    agent: 'funding',
+    ...result
+  }
 }

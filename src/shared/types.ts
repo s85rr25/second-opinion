@@ -19,6 +19,7 @@ export interface LineageEdge {
 
 export interface LineageOutput {
   agent: 'lineage'
+  summary: string
   claims: string[]
   nodes: LineageNode[]
   edges: LineageEdge[]
@@ -29,6 +30,7 @@ export interface LineageOutput {
 
 export interface SteelmanOutput {
   agent: 'steelman'
+  summary: string
   thesis: string
   counter_evidence: Array<{
     claim: string
@@ -43,6 +45,7 @@ export interface SteelmanOutput {
 
 export interface FundingOutput {
   agent: 'funding'
+  summary: string
   funders: Array<{ entity: string; relationship: string; notes: string }>
   quoted_experts: Array<{ name: string; affiliation: string; disclosed_conflicts: string }>
   confidence: number
@@ -51,6 +54,7 @@ export interface FundingOutput {
 
 export interface TrackRecordOutput {
   agent: 'track_record'
+  summary: string
   author: string
   publication: string
   prior_claims: Array<{ claim: string; date: string; aged_well: boolean; notes: string }>
