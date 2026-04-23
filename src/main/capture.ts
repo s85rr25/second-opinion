@@ -1,20 +1,33 @@
-import { desktopCapturer } from 'electron'
+import { execFile } from 'child_process'
+import { readFile, unlink } from 'fs/promises'
+import { join } from 'path'
+import { tmpdir } from 'os'
 
 export async function captureScreen(): Promise<Buffer> {
-  const sources = await desktopCapturer.getSources({
-    types: ['screen'],
-    thumbnailSize: { width: 1920 * 2, height: 1080 * 2 } // 2x for Retina
+  const tmpFile = join(tmpdir(), `second-opinion-${Date.now()}.png`)
+
+  await new Promise<void>((resolve, reject) => {
+    execFile('screencapture', ['-x', tmpFile], (error) => {
+      if (error) {
+        reject(
+          new Error(
+            'Screen capture failed. Grant Screen Recording permission in System Settings > Privacy & Security.'
+          )
+        )
+      } else {
+        resolve()
+      }
+    })
   })
 
-  const primarySource = sources[0]
-  if (!primarySource) {
-    throw new Error('No screen source available. Check Screen Recording permission.')
+  const buffer = await readFile(tmpFile)
+  await unlink(tmpFile).catch(() => {})
+
+  if (buffer.length === 0) {
+    throw new Error(
+      'Captured empty screenshot. Grant Screen Recording permission in System Settings > Privacy & Security.'
+    )
   }
 
-  const image = primarySource.thumbnail
-  if (image.isEmpty()) {
-    throw new Error('Captured empty screenshot. Grant Screen Recording permission in System Settings > Privacy & Security.')
-  }
-
-  return image.toPNG()
+  return buffer
 }
