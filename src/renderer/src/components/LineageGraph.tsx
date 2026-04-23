@@ -12,14 +12,28 @@ interface GraphNode {
   url: string
 }
 
+type LinkEndpoint = string | { id: string }
+
 interface GraphLink {
-  source: string
-  target: string
+  source: LinkEndpoint
+  target: LinkEndpoint
   relationship: string
 }
 
+function endpointId(endpoint: LinkEndpoint): string {
+  return typeof endpoint === 'object' ? endpoint.id : endpoint
+}
+
+function linkKey(link: GraphLink): string {
+  return `${endpointId(link.source)}->${endpointId(link.target)}`
+}
+
+const EDGE_FADE_MS = 450
+
 export function LineageGraph({ lineage }: { lineage: LineageOutput }): React.JSX.Element {
   const [visibleNodeCount, setVisibleNodeCount] = useState(0)
+  const [visibleEdgeCount, setVisibleEdgeCount] = useState(0)
+  const edgeRevealTimesRef = useRef<Map<string, number>>(new Map())
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Transform data for react-force-graph-2d
@@ -38,7 +52,7 @@ export function LineageGraph({ lineage }: { lineage: LineageOutput }): React.JSX
     relationship: e.relationship
   }))
 
-  // Staggered node appearance
+  // Phase 1: stagger nodes in
   useEffect(() => {
     if (visibleNodeCount >= allNodes.length) return
     const timer = setTimeout(
@@ -48,14 +62,31 @@ export function LineageGraph({ lineage }: { lineage: LineageOutput }): React.JSX
     return () => clearTimeout(timer)
   }, [visibleNodeCount, allNodes.length])
 
+  // Phase 2: once all nodes are visible, stagger edges in (with brief pause before the first)
+  useEffect(() => {
+    if (visibleNodeCount < allNodes.length) return
+    if (visibleEdgeCount >= allLinks.length) return
+    const delay = visibleEdgeCount === 0 ? 500 : 180
+    const timer = setTimeout(() => {
+      const nextIndex = visibleEdgeCount
+      const newEdge = allLinks[nextIndex]
+      if (newEdge) {
+        edgeRevealTimesRef.current.set(linkKey(newEdge), Date.now())
+      }
+      setVisibleEdgeCount((c) => Math.min(c + 1, allLinks.length))
+    }, delay)
+    return () => clearTimeout(timer)
+  }, [visibleNodeCount, visibleEdgeCount, allNodes.length, allLinks.length])
+
   const visibleNodes = allNodes.slice(0, visibleNodeCount)
-  const visibleNodeIds = new Set(visibleNodes.map((n) => n.id))
-  const visibleLinks = allLinks.filter(
-    (l) => visibleNodeIds.has(l.source) && visibleNodeIds.has(l.target)
-  )
+  const visibleLinks = allLinks.slice(0, visibleEdgeCount)
 
   const nodeCanvasObject = useCallback(
-    (node: GraphNode & { x?: number; y?: number }, ctx: CanvasRenderingContext2D) => {
+    (
+      node: GraphNode & { x?: number; y?: number },
+      ctx: CanvasRenderingContext2D,
+      globalScale: number
+    ) => {
       const x = node.x || 0
       const y = node.y || 0
       const radius = node.is_root ? 8 : 5
@@ -78,14 +109,34 @@ export function LineageGraph({ lineage }: { lineage: LineageOutput }): React.JSX
       ctx.lineWidth = 1
       ctx.stroke()
 
-      // Publisher label
-      ctx.font = '3px -apple-system, sans-serif'
-      ctx.fillStyle = 'rgba(255,255,255,0.7)'
+      // Publisher label — divide by globalScale so size stays constant on screen
+      const fontSize = 10 / globalScale
+      ctx.font = `${fontSize}px -apple-system, sans-serif`
+      ctx.fillStyle = 'rgba(255,255,255,0.75)'
       ctx.textAlign = 'center'
-      ctx.fillText(node.publisher, x, y + radius + 5)
+      ctx.textBaseline = 'top'
+      ctx.fillText(node.publisher, x, y + radius + 2)
     },
     []
   )
+
+  const linkColorFn = useCallback((link: GraphLink): string => {
+    const revealedAt = edgeRevealTimesRef.current.get(linkKey(link))
+    if (revealedAt === undefined) return 'rgba(147, 197, 253, 0)'
+    const elapsed = Date.now() - revealedAt
+    const t = Math.min(1, elapsed / EDGE_FADE_MS)
+    // ease-out
+    const eased = 1 - Math.pow(1 - t, 2)
+    return `rgba(147, 197, 253, ${eased * 0.5})`
+  }, [])
+
+  const linkArrowLengthFn = useCallback((link: GraphLink): number => {
+    const revealedAt = edgeRevealTimesRef.current.get(linkKey(link))
+    if (revealedAt === undefined) return 0
+    const elapsed = Date.now() - revealedAt
+    const t = Math.min(1, elapsed / EDGE_FADE_MS)
+    return 3 * t
+  }, [])
 
   if (allNodes.length === 0) return <></>
 
@@ -110,10 +161,18 @@ export function LineageGraph({ lineage }: { lineage: LineageOutput }): React.JSX
         width={396}
         height={170}
         graphData={{ nodes: visibleNodes, links: visibleLinks }}
-        nodeCanvasObject={nodeCanvasObject as unknown as (node: object, ctx: CanvasRenderingContext2D, globalScale: number) => void}
-        linkColor={() => 'rgba(255,255,255,0.15)'}
+        nodeCanvasObject={
+          nodeCanvasObject as unknown as (
+            node: object,
+            ctx: CanvasRenderingContext2D,
+            globalScale: number
+          ) => void
+        }
+        linkColor={linkColorFn as unknown as (link: object) => string}
         linkWidth={1}
-        linkDirectionalArrowLength={3}
+        linkDirectionalArrowLength={
+          linkArrowLengthFn as unknown as (link: object) => number
+        }
         linkDirectionalArrowRelPos={1}
         cooldownTicks={Infinity}
         d3VelocityDecay={0.3}
