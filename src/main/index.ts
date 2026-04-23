@@ -2,6 +2,7 @@ import { app, BrowserWindow, globalShortcut, Tray, clipboard, nativeImage } from
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { registerIPC } from './ipc'
+import { captureFullText } from './capture-text'
 
 let tray: Tray | null = null
 let panelWindow: BrowserWindow | null = null
@@ -53,13 +54,22 @@ function togglePanel(): void {
   }
 }
 
-function triggerAnalysis(): void {
+async function triggerAnalysis(): Promise<void> {
   if (!panelWindow) return
-  if (tray) {
-    positionPanelUnderTray(panelWindow, tray.getBounds())
+  try {
+    const text = await captureFullText()
+    if (tray) {
+      positionPanelUnderTray(panelWindow, tray.getBounds())
+    }
+    panelWindow.show()
+    panelWindow.webContents.send('analysis:trigger-clipboard', text)
+  } catch (error) {
+    if (tray) {
+      positionPanelUnderTray(panelWindow, tray.getBounds())
+    }
+    panelWindow.show()
+    panelWindow.webContents.send('analysis:error', String(error))
   }
-  panelWindow.show()
-  panelWindow.webContents.send('analysis:trigger-from-hotkey')
 }
 
 function triggerClipboardAnalysis(): void {
